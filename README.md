@@ -8,7 +8,25 @@ Custom statusline configurations for [Claude Code](https://claude.ai/code) CLI.
 curl -fsSL https://raw.githubusercontent.com/diegocconsolini/claude-statusline/main/install.sh | bash
 ```
 
-This will show an interactive menu to choose your preferred version.
+Interactive menu with 4 options:
+
+```
+╔════════════════════════════════════════════════════════════════════╗
+║              Claude Code Statusline Installer                      ║
+╚════════════════════════════════════════════════════════════════════╝
+
+  [1] Minimal
+      user@host:/current/directory
+
+  [2] Standard
+      user@host:/directory (main) [Opus] [12%]
+
+  [3] Full
+      user@host:/dir (main) [Opus] [12%] 5m23s +120/-15 ↓45k/↑12k
+
+  [4] Custom (Recommended)
+      Toggle each feature ON/OFF
+```
 
 ## Versions
 
@@ -16,25 +34,24 @@ This will show an interactive menu to choose your preferred version.
 ```
 user@host:/current/directory
 ```
-Simple and clean - just shows your location.
 
-### 2. Standard (Recommended)
+### 2. Standard
 ```
 user@host:/current/directory (main) [Opus] [12%]
 ```
+
 | Element | Color | Description |
 |---------|-------|-------------|
 | `user@host` | Green | Username and hostname |
 | `/directory` | Blue | Current working directory |
-| `(main)` | Yellow | Git branch (if in repo) |
-| `[Opus]` | Cyan | Active Claude model |
-| `[12%]` | Magenta | Context window usage |
+| `(main)` | Yellow | Git branch |
+| `[Opus]` | Cyan | Claude model |
+| `[12%]` | Magenta | Context usage |
 
 ### 3. Full
 ```
 user@host:/dir (main) [Opus] [12%] 5m23s +120/-15 ↓45k/↑12k
 ```
-Everything in Standard, plus:
 
 | Element | Color | Description |
 |---------|-------|-------------|
@@ -44,9 +61,57 @@ Everything in Standard, plus:
 | `↓45k` | Cyan | Input tokens |
 | `↑12k` | Cyan | Output tokens |
 
+### 4. Custom (Recommended)
+
+Toggle any feature ON/OFF by editing the config section:
+
+```bash
+# Edit after install
+nano ~/.claude/statusline.sh
+```
+
+```bash
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# CONFIGURATION - Set to true or false
+#━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+SHOW_USER_HOST=true      # user@host
+SHOW_DIRECTORY=true      # /current/directory
+SHOW_GIT_BRANCH=true     # (main)
+SHOW_MODEL=true          # [Opus]
+SHOW_CONTEXT_PCT=true    # [12%]
+SHOW_DURATION=true       # 5m23s
+SHOW_LINES_CHANGED=true  # +120/-15
+SHOW_TOKENS=true         # ↓45k/↑12k
+SHOW_COST=false          # $0.45
+```
+
+**Examples:**
+
+| Config | Result |
+|--------|--------|
+| All true | `user@host:/dir (main) [Opus] [12%] 5m23s +120/-15 ↓45k/↑12k` |
+| Model + Context only | `[Opus] [12%]` |
+| Git + Tokens | `(main) ↓45k/↑12k` |
+| Dir + Cost | `/current/directory $0.45` |
+
+## Available Features
+
+| Feature | Variable | Example | Color |
+|---------|----------|---------|-------|
+| User & Host | `SHOW_USER_HOST` | `user@host` | Green |
+| Directory | `SHOW_DIRECTORY` | `/path/to/dir` | Blue |
+| Git Branch | `SHOW_GIT_BRANCH` | `(main)` | Yellow |
+| Model | `SHOW_MODEL` | `[Opus]` | Cyan |
+| Context % | `SHOW_CONTEXT_PCT` | `[12%]` | Magenta |
+| Duration | `SHOW_DURATION` | `5m23s` | White |
+| Lines Changed | `SHOW_LINES_CHANGED` | `+120/-15` | Green/Red |
+| Tokens | `SHOW_TOKENS` | `↓45k/↑12k` | Cyan |
+| Cost | `SHOW_COST` | `$0.45` | Yellow |
+
 ## Manual Installation
 
-### 1. Install jq (required)
+### 1. Install jq
 
 ```bash
 # macOS
@@ -59,7 +124,7 @@ sudo apt install jq
 sudo pacman -S jq
 ```
 
-### 2. Download your preferred version
+### 2. Download script
 
 ```bash
 mkdir -p ~/.claude
@@ -68,11 +133,12 @@ mkdir -p ~/.claude
 curl -o ~/.claude/statusline.sh https://raw.githubusercontent.com/diegocconsolini/claude-statusline/main/statusline-minimal.sh
 curl -o ~/.claude/statusline.sh https://raw.githubusercontent.com/diegocconsolini/claude-statusline/main/statusline-standard.sh
 curl -o ~/.claude/statusline.sh https://raw.githubusercontent.com/diegocconsolini/claude-statusline/main/statusline-full.sh
+curl -o ~/.claude/statusline.sh https://raw.githubusercontent.com/diegocconsolini/claude-statusline/main/statusline-custom.sh
 
 chmod +x ~/.claude/statusline.sh
 ```
 
-### 3. Configure Claude Code
+### 3. Configure
 
 Add to `~/.claude/settings.json`:
 
@@ -85,40 +151,23 @@ Add to `~/.claude/settings.json`:
 }
 ```
 
-## Available Data
+## JSON Data Reference
 
-The statusline script receives JSON from Claude Code with this data:
+Data available from Claude Code:
 
-| Data | JSON Path | Used In |
-|------|-----------|---------|
-| Model name | `.model.display_name` | Standard, Full |
-| Context size | `.context_window.context_window_size` | Standard, Full |
-| Current tokens | `.context_window.current_usage` | Standard, Full |
-| Session duration | `.cost.total_duration_ms` | Full |
-| Lines added | `.cost.total_lines_added` | Full |
-| Lines removed | `.cost.total_lines_removed` | Full |
-| Input tokens | `.context_window.total_input_tokens` | Full |
-| Output tokens | `.context_window.total_output_tokens` | Full |
-| Session cost | `.cost.total_cost_usd` | (available) |
-| Claude Code version | `.version` | (available) |
-| Session ID | `.session_id` | (available) |
-
-## Customization
-
-Edit `~/.claude/statusline.sh` to customize colors or add/remove elements.
-
-### Color Codes
-
-```bash
-GREEN=$'\033[01;32m'
-BLUE=$'\033[01;34m'
-YELLOW=$'\033[01;33m'
-CYAN=$'\033[01;36m'
-MAGENTA=$'\033[01;35m'
-WHITE=$'\033[01;37m'
-RED=$'\033[01;31m'
-RESET=$'\033[00m'
-```
+| Data | JSON Path |
+|------|-----------|
+| Model name | `.model.display_name` |
+| Context size | `.context_window.context_window_size` |
+| Current usage | `.context_window.current_usage` |
+| Input tokens | `.context_window.total_input_tokens` |
+| Output tokens | `.context_window.total_output_tokens` |
+| Duration (ms) | `.cost.total_duration_ms` |
+| Lines added | `.cost.total_lines_added` |
+| Lines removed | `.cost.total_lines_removed` |
+| Session cost | `.cost.total_cost_usd` |
+| Version | `.version` |
+| Session ID | `.session_id` |
 
 ## Compatibility
 
@@ -128,24 +177,25 @@ RESET=$'\033[00m'
 
 ## Official Documentation
 
-- **Claude Code Statusline Guide**: https://docs.anthropic.com/en/docs/claude-code/statusline
-- **Claude Code Documentation**: https://docs.anthropic.com/en/docs/claude-code
-- **Claude Code GitHub**: https://github.com/anthropics/claude-code
+- [Claude Code Statusline](https://docs.anthropic.com/en/docs/claude-code/statusline)
+- [Claude Code Documentation](https://docs.anthropic.com/en/docs/claude-code)
+- [Claude Code GitHub](https://github.com/anthropics/claude-code)
 
 ## Troubleshooting
 
-**Statusline doesn't appear?**
-- Ensure script is executable: `chmod +x ~/.claude/statusline.sh`
-- Check jq is installed: `jq --version`
-- Restart Claude Code
+**Statusline not appearing?**
+```bash
+chmod +x ~/.claude/statusline.sh
+jq --version  # Ensure jq is installed
+```
 
-**Colors not showing?**
-- Make sure your terminal supports ANSI colors
-- Try running the script manually to test
+**Colors showing as escape codes?**
+- Use `$'\033[...'` syntax (not `\033[...]` strings)
 
-**Escape codes showing as text?**
-- Use `$'\033[...'` syntax (not `\033[...` strings)
-- See the scripts in this repo for correct usage
+**Testing manually:**
+```bash
+echo '{"model":{"display_name":"Opus"}}' | ~/.claude/statusline.sh
+```
 
 ## License
 
