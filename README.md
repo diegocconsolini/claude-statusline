@@ -5,7 +5,7 @@ Custom statusline configurations for [Claude Code](https://claude.ai/code) CLI.
 ## Quick Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/diegocconsolini/claude-statusline/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/diegocconsolini/claude-statusline/master/install.sh | bash
 ```
 
 Interactive menu with 4 options:
@@ -130,10 +130,10 @@ sudo pacman -S jq
 mkdir -p ~/.claude
 
 # Choose ONE:
-curl -o ~/.claude/statusline.sh https://raw.githubusercontent.com/diegocconsolini/claude-statusline/main/statusline-minimal.sh
-curl -o ~/.claude/statusline.sh https://raw.githubusercontent.com/diegocconsolini/claude-statusline/main/statusline-standard.sh
-curl -o ~/.claude/statusline.sh https://raw.githubusercontent.com/diegocconsolini/claude-statusline/main/statusline-full.sh
-curl -o ~/.claude/statusline.sh https://raw.githubusercontent.com/diegocconsolini/claude-statusline/main/statusline-custom.sh
+curl -o ~/.claude/statusline.sh https://raw.githubusercontent.com/diegocconsolini/claude-statusline/master/statusline-minimal.sh
+curl -o ~/.claude/statusline.sh https://raw.githubusercontent.com/diegocconsolini/claude-statusline/master/statusline-standard.sh
+curl -o ~/.claude/statusline.sh https://raw.githubusercontent.com/diegocconsolini/claude-statusline/master/statusline-full.sh
+curl -o ~/.claude/statusline.sh https://raw.githubusercontent.com/diegocconsolini/claude-statusline/master/statusline-custom.sh
 
 chmod +x ~/.claude/statusline.sh
 ```

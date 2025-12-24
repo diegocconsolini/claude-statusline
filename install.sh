@@ -17,7 +17,8 @@ BOLD=$'\033[1m'
 DIM=$'\033[2m'
 RESET=$'\033[00m'
 
-REPO_URL="https://raw.githubusercontent.com/diegocconsolini/claude-statusline/main"
+REPO_URL="https://raw.githubusercontent.com/diegocconsolini/claude-statusline/master"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo ""
 echo "${BOLD}╔════════════════════════════════════════════════════════════════════╗${RESET}"
@@ -88,14 +89,168 @@ case $choice in
         ;;
 esac
 
-echo ""
-echo "${CYAN}Installing ${VERSION} version...${RESET}"
-
 # Create directory
 mkdir -p ~/.claude
 
-# Download the script
-curl -fsSL "${REPO_URL}/statusline-${VERSION}.sh" -o ~/.claude/statusline.sh
+# Custom version: interactive checkbox selection
+if [ "$VERSION" = "custom" ]; then
+    # Feature definitions: name|label|example|default
+    FEATURES=(
+        "SHOW_USER_HOST|User@Host|user@host|1"
+        "SHOW_DIRECTORY|Directory|/path/to/dir|1"
+        "SHOW_GIT_BRANCH|Git Branch|(main)|1"
+        "SHOW_MODEL|Model|[Opus]|1"
+        "SHOW_CONTEXT_PCT|Context %|[12%]|1"
+        "SHOW_DURATION|Duration|5m23s|1"
+        "SHOW_LINES_CHANGED|Lines Changed|+120/-15|1"
+        "SHOW_TOKENS|Tokens|↓45k/↑12k|1"
+        "SHOW_COST|Cost|\$0.45|0"
+    )
+
+    # Initialize states from defaults
+    declare -a STATES
+    for i in "${!FEATURES[@]}"; do
+        IFS='|' read -r _ _ _ default <<< "${FEATURES[$i]}"
+        STATES[$i]=$default
+    done
+
+    current=0
+    total=${#FEATURES[@]}
+
+    # Hide cursor
+    tput civis 2>/dev/null || true
+
+    # Cleanup on exit
+    cleanup() {
+        tput cnorm 2>/dev/null || true
+        stty echo 2>/dev/null || true
+    }
+    trap cleanup EXIT
+
+    draw_menu() {
+        # Move cursor up to redraw (after first draw)
+        if [ "$1" = "redraw" ]; then
+            tput cuu $((total + 4)) 2>/dev/null || printf "\033[%dA" $((total + 4))
+        fi
+
+        echo ""
+        echo "${BOLD}Configure your statusline:${RESET}"
+        echo "${DIM}↑/↓ navigate • Space toggle • Enter confirm${RESET}"
+        echo ""
+
+        for i in "${!FEATURES[@]}"; do
+            IFS='|' read -r name label example _ <<< "${FEATURES[$i]}"
+
+            if [ "${STATES[$i]}" = "1" ]; then
+                checkbox="${GREEN}[✓]${RESET}"
+            else
+                checkbox="${DIM}[ ]${RESET}"
+            fi
+
+            if [ "$i" = "$current" ]; then
+                pointer="${CYAN}▸${RESET}"
+                line="${BOLD}${label}${RESET} ${DIM}${example}${RESET}"
+            else
+                pointer=" "
+                line="${label} ${DIM}${example}${RESET}"
+            fi
+
+            printf " %s %s %s\n" "$pointer" "$checkbox" "$line"
+        done
+    }
+
+    # Initial draw
+    draw_menu
+
+    # Read input
+    while true; do
+        # Read single keypress
+        IFS= read -rsn1 key
+
+        case "$key" in
+            $'\x1b')  # Escape sequence
+                read -rsn2 key2
+                case "$key2" in
+                    '[A')  # Up arrow
+                        ((current > 0)) && ((current--))
+                        ;;
+                    '[B')  # Down arrow
+                        ((current < total - 1)) && ((current++))
+                        ;;
+                esac
+                ;;
+            ' ')  # Space - toggle
+                if [ "${STATES[$current]}" = "1" ]; then
+                    STATES[$current]=0
+                else
+                    STATES[$current]=1
+                fi
+                ;;
+            ''|$'\n')  # Enter - confirm
+                break
+                ;;
+            'k'|'K')  # Vim up
+                ((current > 0)) && ((current--))
+                ;;
+            'j'|'J')  # Vim down
+                ((current < total - 1)) && ((current++))
+                ;;
+        esac
+
+        draw_menu "redraw"
+    done
+
+    # Show cursor again
+    tput cnorm 2>/dev/null || true
+
+    # Extract final values
+    for i in "${!FEATURES[@]}"; do
+        IFS='|' read -r name _ _ _ <<< "${FEATURES[$i]}"
+        if [ "${STATES[$i]}" = "1" ]; then
+            eval "${name}=true"
+        else
+            eval "${name}=false"
+        fi
+    done
+
+    echo ""
+    echo "${CYAN}Installing custom version...${RESET}"
+
+    # Install the script (local first, then GitHub fallback)
+    LOCAL_FILE="${SCRIPT_DIR}/statusline-${VERSION}.sh"
+    if [ -f "$LOCAL_FILE" ]; then
+        cp "$LOCAL_FILE" ~/.claude/statusline.sh
+        echo "${DIM}(installed from local file)${RESET}"
+    else
+        curl -fsSL "${REPO_URL}/statusline-${VERSION}.sh" -o ~/.claude/statusline.sh
+        echo "${DIM}(downloaded from GitHub)${RESET}"
+    fi
+
+    # Apply user's feature selections
+    sed -i.tmp "s/^SHOW_USER_HOST=.*/SHOW_USER_HOST=${SHOW_USER_HOST}/" ~/.claude/statusline.sh
+    sed -i.tmp "s/^SHOW_DIRECTORY=.*/SHOW_DIRECTORY=${SHOW_DIRECTORY}/" ~/.claude/statusline.sh
+    sed -i.tmp "s/^SHOW_GIT_BRANCH=.*/SHOW_GIT_BRANCH=${SHOW_GIT_BRANCH}/" ~/.claude/statusline.sh
+    sed -i.tmp "s/^SHOW_MODEL=.*/SHOW_MODEL=${SHOW_MODEL}/" ~/.claude/statusline.sh
+    sed -i.tmp "s/^SHOW_CONTEXT_PCT=.*/SHOW_CONTEXT_PCT=${SHOW_CONTEXT_PCT}/" ~/.claude/statusline.sh
+    sed -i.tmp "s/^SHOW_DURATION=.*/SHOW_DURATION=${SHOW_DURATION}/" ~/.claude/statusline.sh
+    sed -i.tmp "s/^SHOW_LINES_CHANGED=.*/SHOW_LINES_CHANGED=${SHOW_LINES_CHANGED}/" ~/.claude/statusline.sh
+    sed -i.tmp "s/^SHOW_TOKENS=.*/SHOW_TOKENS=${SHOW_TOKENS}/" ~/.claude/statusline.sh
+    sed -i.tmp "s/^SHOW_COST=.*/SHOW_COST=${SHOW_COST}/" ~/.claude/statusline.sh
+    rm -f ~/.claude/statusline.sh.tmp
+else
+    echo ""
+    echo "${CYAN}Installing ${VERSION} version...${RESET}"
+
+    # Install the script (local first, then GitHub fallback)
+    LOCAL_FILE="${SCRIPT_DIR}/statusline-${VERSION}.sh"
+    if [ -f "$LOCAL_FILE" ]; then
+        cp "$LOCAL_FILE" ~/.claude/statusline.sh
+        echo "${DIM}(installed from local file)${RESET}"
+    else
+        curl -fsSL "${REPO_URL}/statusline-${VERSION}.sh" -o ~/.claude/statusline.sh
+        echo "${DIM}(downloaded from GitHub)${RESET}"
+    fi
+fi
 chmod +x ~/.claude/statusline.sh
 
 # Update settings.json
@@ -135,12 +290,18 @@ echo "  Settings:  ~/.claude/settings.json"
 echo ""
 
 if [ "$VERSION" = "custom" ]; then
-    echo "${BOLD}To customize features:${RESET}"
-    echo "  ${CYAN}nano ~/.claude/statusline.sh${RESET}"
+    echo "${BOLD}Your configuration:${RESET}"
+    echo "  SHOW_USER_HOST=${SHOW_USER_HOST}"
+    echo "  SHOW_DIRECTORY=${SHOW_DIRECTORY}"
+    echo "  SHOW_GIT_BRANCH=${SHOW_GIT_BRANCH}"
+    echo "  SHOW_MODEL=${SHOW_MODEL}"
+    echo "  SHOW_CONTEXT_PCT=${SHOW_CONTEXT_PCT}"
+    echo "  SHOW_DURATION=${SHOW_DURATION}"
+    echo "  SHOW_LINES_CHANGED=${SHOW_LINES_CHANGED}"
+    echo "  SHOW_TOKENS=${SHOW_TOKENS}"
+    echo "  SHOW_COST=${SHOW_COST}"
     echo ""
-    echo "  Then change any feature to true/false:"
-    echo "    SHOW_GIT_BRANCH=false"
-    echo "    SHOW_COST=true"
+    echo "${DIM}To change later: nano ~/.claude/statusline.sh${RESET}"
     echo ""
 fi
 
