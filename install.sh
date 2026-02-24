@@ -101,10 +101,15 @@ if [ "$VERSION" = "custom" ]; then
         "SHOW_GIT_BRANCH|Git Branch|(main)|1"
         "SHOW_MODEL|Model|[Opus]|1"
         "SHOW_CONTEXT_PCT|Context %|[12%]|1"
+        "SHOW_REMAINING_PCT|Remaining %|[88% left]|0"
         "SHOW_DURATION|Duration|5m23s|1"
         "SHOW_LINES_CHANGED|Lines Changed|+120/-15|1"
         "SHOW_TOKENS|Tokens|↓45k/↑12k|1"
         "SHOW_COST|Cost|\$0.45|0"
+        "SHOW_API_DURATION|API Wait Time|api:2s|0"
+        "SHOW_VIM_MODE|Vim Mode|VIM:NORMAL|0"
+        "SHOW_AGENT_NAME|Agent Name|agent:name|0"
+        "SHOW_VERSION|CC Version|v1.0.80|0"
     )
 
     # Initialize states from defaults
@@ -236,6 +241,11 @@ if [ "$VERSION" = "custom" ]; then
     sed -i.tmp "s/^SHOW_LINES_CHANGED=.*/SHOW_LINES_CHANGED=${SHOW_LINES_CHANGED}/" ~/.claude/statusline.sh
     sed -i.tmp "s/^SHOW_TOKENS=.*/SHOW_TOKENS=${SHOW_TOKENS}/" ~/.claude/statusline.sh
     sed -i.tmp "s/^SHOW_COST=.*/SHOW_COST=${SHOW_COST}/" ~/.claude/statusline.sh
+    sed -i.tmp "s/^SHOW_API_DURATION=.*/SHOW_API_DURATION=${SHOW_API_DURATION}/" ~/.claude/statusline.sh
+    sed -i.tmp "s/^SHOW_VIM_MODE=.*/SHOW_VIM_MODE=${SHOW_VIM_MODE}/" ~/.claude/statusline.sh
+    sed -i.tmp "s/^SHOW_AGENT_NAME=.*/SHOW_AGENT_NAME=${SHOW_AGENT_NAME}/" ~/.claude/statusline.sh
+    sed -i.tmp "s/^SHOW_REMAINING_PCT=.*/SHOW_REMAINING_PCT=${SHOW_REMAINING_PCT}/" ~/.claude/statusline.sh
+    sed -i.tmp "s/^SHOW_VERSION=.*/SHOW_VERSION=${SHOW_VERSION}/" ~/.claude/statusline.sh
     rm -f ~/.claude/statusline.sh.tmp
 else
     echo ""
@@ -267,7 +277,7 @@ if [ -f "$SETTINGS_FILE" ]; then
     else
         # Add statusLine to existing settings using jq if available
         if command -v jq &> /dev/null; then
-            jq '. + {"statusLine": {"type": "command", "command": "~/.claude/statusline.sh"}}' "$SETTINGS_FILE" > "${SETTINGS_FILE}.tmp"
+            jq '. + {"statusLine": {"type": "command", "command": "~/.claude/statusline.sh", "padding": 2}}' "$SETTINGS_FILE" > "${SETTINGS_FILE}.tmp"
             mv "${SETTINGS_FILE}.tmp" "$SETTINGS_FILE"
         else
             # Fallback: simple sed approach
@@ -279,7 +289,7 @@ if [ -f "$SETTINGS_FILE" ]; then
     fi
 else
     # Create new settings file
-    echo '{"statusLine": {"type": "command", "command": "~/.claude/statusline.sh"}}' > "$SETTINGS_FILE"
+    echo '{"statusLine": {"type": "command", "command": "~/.claude/statusline.sh", "padding": 2}}' > "$SETTINGS_FILE"
 fi
 
 echo ""
@@ -300,6 +310,11 @@ if [ "$VERSION" = "custom" ]; then
     echo "  SHOW_LINES_CHANGED=${SHOW_LINES_CHANGED}"
     echo "  SHOW_TOKENS=${SHOW_TOKENS}"
     echo "  SHOW_COST=${SHOW_COST}"
+    echo "  SHOW_API_DURATION=${SHOW_API_DURATION}"
+    echo "  SHOW_VIM_MODE=${SHOW_VIM_MODE}"
+    echo "  SHOW_AGENT_NAME=${SHOW_AGENT_NAME}"
+    echo "  SHOW_REMAINING_PCT=${SHOW_REMAINING_PCT}"
+    echo "  SHOW_VERSION=${SHOW_VERSION}"
     echo ""
     echo "${DIM}To change later: nano ~/.claude/statusline.sh${RESET}"
     echo ""
