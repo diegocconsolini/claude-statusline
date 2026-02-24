@@ -14,36 +14,31 @@ RESET=$'\033[00m'
 
 user=$(whoami)
 host=$(hostname -s)
-dir=$(pwd)
+dir=$(echo "$input" | jq -r '.workspace.current_dir // .cwd // "."')
 
 # Model name
 model=$(echo "$input" | jq -r '.model.display_name // "Unknown"')
 case "$model" in
-  *"Opus"*) model_short="Opus" ;;
+  *"Opus"*)   model_short="Opus" ;;
   *"Sonnet"*) model_short="Sonnet" ;;
-  *"Haiku"*) model_short="Haiku" ;;
-  *) model_short=$(echo "$model" | awk '{print $1}') ;;
+  *"Haiku"*)  model_short="Haiku" ;;
+  *)          model_short=$(echo "$model" | awk '{print $1}') ;;
 esac
 
 # Git branch
 git_part=""
 if git rev-parse --git-dir > /dev/null 2>&1; then
-  git_branch=$(git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD 2>/dev/null)
+  git_branch=$(git branch --show-current 2>/dev/null)
   if [ -n "$git_branch" ]; then
     git_part=" ${YELLOW}(${git_branch})${RESET}"
   fi
 fi
 
-# Context usage
+# Context usage % (pre-calculated by Claude Code)
 context_part=""
-usage=$(echo "$input" | jq '.context_window.current_usage')
-if [ "$usage" != "null" ]; then
-  current=$(echo "$usage" | jq '.input_tokens + .cache_creation_input_tokens + .cache_read_input_tokens')
-  size=$(echo "$input" | jq '.context_window.context_window_size')
-  if [ "$current" != "null" ] && [ "$size" != "null" ] && [ "$size" -gt 0 ]; then
-    pct=$((current * 100 / size))
-    context_part=" ${MAGENTA}[${pct}%]${RESET}"
-  fi
+pct=$(echo "$input" | jq -r '.context_window.used_percentage // 0' | cut -d. -f1)
+if [ -n "$pct" ] && [ "$pct" != "0" ]; then
+  context_part=" ${MAGENTA}[${pct}%]${RESET}"
 fi
 
 echo "${GREEN}${user}@${host}${RESET}:${BLUE}${dir}${RESET}${git_part} ${CYAN}[${model_short}]${RESET}${context_part}"
