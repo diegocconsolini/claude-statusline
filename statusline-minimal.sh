@@ -11,6 +11,6 @@ RESET=$'\033[00m'
 
 user=$(whoami)
 host=$(hostname -s)
-dir=$(pwd)
+dir=$(echo "$input" | jq -r '.workspace.current_dir // .cwd // "."')
 
 echo "${GREEN}${user}@${host}${RESET}:${BLUE}${dir}${RESET}"
