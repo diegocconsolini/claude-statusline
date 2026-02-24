@@ -91,7 +91,7 @@ fi
 # Context remaining % (pre-calculated by Claude Code)
 if [ "$SHOW_REMAINING_PCT" = true ]; then
   rem=$(echo "$input" | jq -r '.context_window.remaining_percentage // 0' | cut -d. -f1)
-  if [ -n "$rem" ]; then
+  if [ -n "$rem" ] && [ "$rem" != "0" ]; then
     output="${output} ${MAGENTA}[${rem}% left]${RESET}"
   fi
 fi
