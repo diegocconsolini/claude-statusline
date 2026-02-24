@@ -108,6 +108,11 @@ SHOW_COST=false          # $0.45
 | Lines Changed | `SHOW_LINES_CHANGED` | `+120/-15` | Green/Red |
 | Tokens | `SHOW_TOKENS` | `↓45k/↑12k` | Cyan |
 | Cost | `SHOW_COST` | `$0.45` | Yellow |
+| Remaining % | `SHOW_REMAINING_PCT` | `[88% left]` | Magenta |
+| API Wait Time | `SHOW_API_DURATION` | `api:2s` | Dim |
+| Vim Mode | `SHOW_VIM_MODE` | `VIM:NORMAL` | Cyan |
+| Agent Name | `SHOW_AGENT_NAME` | `agent:name` | Yellow |
+| CC Version | `SHOW_VERSION` | `v1.0.80` | Dim |
 
 ## Manual Installation
 
@@ -146,28 +151,88 @@ Add to `~/.claude/settings.json`:
 {
   "statusLine": {
     "type": "command",
-    "command": "~/.claude/statusline.sh"
+    "command": "~/.claude/statusline.sh",
+    "padding": 2
   }
 }
 ```
 
+> `padding` adds extra horizontal spacing (in characters). Optional, defaults to `0`.
+
 ## JSON Data Reference
 
-Data available from Claude Code:
+Data available from Claude Code via stdin:
 
-| Data | JSON Path |
-|------|-----------|
-| Model name | `.model.display_name` |
-| Context size | `.context_window.context_window_size` |
-| Current usage | `.context_window.current_usage` |
-| Input tokens | `.context_window.total_input_tokens` |
-| Output tokens | `.context_window.total_output_tokens` |
-| Duration (ms) | `.cost.total_duration_ms` |
-| Lines added | `.cost.total_lines_added` |
-| Lines removed | `.cost.total_lines_removed` |
-| Session cost | `.cost.total_cost_usd` |
-| Version | `.version` |
-| Session ID | `.session_id` |
+| Data | JSON Path | Notes |
+|------|-----------|-------|
+| Model display name | `.model.display_name` | e.g. `"Opus"` |
+| Model ID | `.model.id` | e.g. `"claude-opus-4-6"` |
+| Current directory | `.workspace.current_dir` | Preferred over `.cwd` |
+| Project directory | `.workspace.project_dir` | Where Claude Code was launched |
+| Current directory (alias) | `.cwd` | Same value as `.workspace.current_dir` |
+| Context used % | `.context_window.used_percentage` | Pre-calculated; use this, not manual math |
+| Context remaining % | `.context_window.remaining_percentage` | Pre-calculated |
+| Context size | `.context_window.context_window_size` | 200000 default, 1000000 with extended |
+| Current usage | `.context_window.current_usage` | `null` before first API call |
+| Input tokens (cumulative) | `.context_window.total_input_tokens` | Across entire session |
+| Output tokens (cumulative) | `.context_window.total_output_tokens` | Across entire session |
+| Total cost | `.cost.total_cost_usd` | USD |
+| Session duration | `.cost.total_duration_ms` | Wall-clock ms |
+| API wait time | `.cost.total_api_duration_ms` | ms waiting for API |
+| Lines added | `.cost.total_lines_added` | |
+| Lines removed | `.cost.total_lines_removed` | |
+| Exceeds 200k tokens | `.exceeds_200k_tokens` | Boolean; fixed 200k threshold |
+| Vim mode | `.vim.mode` | `"NORMAL"` or `"INSERT"`; absent when vim off |
+| Agent name | `.agent.name` | Absent unless `--agent` flag is used |
+| Output style | `.output_style.name` | |
+| Claude Code version | `.version` | |
+| Session ID | `.session_id` | |
+| Transcript path | `.transcript_path` | |
+
+### Full JSON Schema
+
+```json
+{
+  "cwd": "/current/working/directory",
+  "session_id": "abc123...",
+  "transcript_path": "/path/to/transcript.jsonl",
+  "model": {
+    "id": "claude-opus-4-6",
+    "display_name": "Opus"
+  },
+  "workspace": {
+    "current_dir": "/current/working/directory",
+    "project_dir": "/original/project/directory"
+  },
+  "version": "1.0.80",
+  "output_style": { "name": "default" },
+  "cost": {
+    "total_cost_usd": 0.01234,
+    "total_duration_ms": 45000,
+    "total_api_duration_ms": 2300,
+    "total_lines_added": 156,
+    "total_lines_removed": 23
+  },
+  "context_window": {
+    "total_input_tokens": 15234,
+    "total_output_tokens": 4521,
+    "context_window_size": 200000,
+    "used_percentage": 8,
+    "remaining_percentage": 92,
+    "current_usage": {
+      "input_tokens": 8500,
+      "output_tokens": 1200,
+      "cache_creation_input_tokens": 5000,
+      "cache_read_input_tokens": 2000
+    }
+  },
+  "exceeds_200k_tokens": false,
+  "vim": { "mode": "NORMAL" },
+  "agent": { "name": "security-reviewer" }
+}
+```
+
+> **Note:** `vim` is absent when vim mode is off. `agent` is absent unless `--agent` is used. `context_window.current_usage` is `null` before the first API call.
 
 ## Compatibility
 
@@ -189,12 +254,14 @@ chmod +x ~/.claude/statusline.sh
 jq --version  # Ensure jq is installed
 ```
 
+If `disableAllHooks` is set to `true` in your `~/.claude/settings.json`, the status line is also disabled. Remove it or set it to `false`.
+
 **Colors showing as escape codes?**
 - Use `$'\033[...'` syntax (not `\033[...]` strings)
 
 **Testing manually:**
 ```bash
-echo '{"model":{"display_name":"Opus"}}' | ~/.claude/statusline.sh
+echo '{"model":{"display_name":"Opus"},"workspace":{"current_dir":"/tmp/test"},"context_window":{"used_percentage":25,"remaining_percentage":75}}' | ~/.claude/statusline.sh
 ```
 
 ## License
